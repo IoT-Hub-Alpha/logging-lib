@@ -1,6 +1,6 @@
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py313"]
 #exclude = '''
 #/path/to/dir/.*
 #'''
@@ -10,15 +10,26 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "team_shared_lib"
+name = "iot-logging-schemas"
 version = "0.1.0"
-description = "Shared Python utilities for the team"
+description = "Unified log schemas for IoT microservices (Django, FastAPI, Kafka)"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [
   { name = "Iot Team Alpha" }
 ]
-dependencies = []
+dependencies = [
+    "pydantic>=2.0",
+    "python-json-logger>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -27,4 +38,8 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-shared_lib = ["py.typed"]
+iot_logging = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/iot_logging --cov-report=term-missing"
