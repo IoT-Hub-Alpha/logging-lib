@@ -12,7 +12,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": "iot_logging.formatters.json_formatter.ExcludingNullJsonFormatter",
+            "()": "iot_logging.formatters.json_formatter.StructuredJsonFormatter",
             "fmt": (
                 "%(asctime)s %(levelname)s %(name)s %(message)s "
                 "%(request_id)s %(method)s %(path)s %(status_code)s %(duration_ms)s"

@@ -3,11 +3,11 @@
 from pythonjsonlogger import jsonlogger
 
 
-class ExcludingNullJsonFormatter(jsonlogger.JsonFormatter):
+class StructuredJsonFormatter(jsonlogger.JsonFormatter):
     """
-    JSON formatter that excludes None values from output.
+    Structured JSON formatter that excludes None values from output.
 
-    This ensures:
+    Produces clean, structured JSON logs with only relevant fields:
     - Request logs don't have task_id/task_name
     - Task logs don't have request_method/request_path
     - No wasteful null fields in JSON

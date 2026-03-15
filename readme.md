@@ -38,7 +38,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'json': {
-            '()': 'iot_logging.ExcludingNullJsonFormatter',
+            '()': 'iot_logging.StructuredJsonFormatter',
             'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s %(method)s %(path)s',
         },
     },
@@ -80,7 +80,7 @@ logger.info(
 
 ```python
 from fastapi import FastAPI
-from iot_logging import ExcludingNullJsonFormatter
+from iot_logging import StructuredJsonFormatter
 import logging
 
 app = FastAPI()
@@ -369,7 +369,7 @@ pytest tests/test_schemas.py -v
 
 ### Formatters
 
-- `ExcludingNullJsonFormatter` - JSON formatter that excludes None values
+- `StructuredJsonFormatter` - JSON formatter that excludes None values
 
 ### Context
 
@@ -408,7 +408,7 @@ from iot_logging import context
 context.set_request(...)
 
 # Use library formatter
-from iot_logging import ExcludingNullJsonFormatter
+from iot_logging import StructuredJsonFormatter
 ```
 
 ## 🚀 Future Plans

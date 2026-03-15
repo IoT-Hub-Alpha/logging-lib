@@ -9,7 +9,7 @@ import time
 import uuid
 
 from fastapi import FastAPI, Request, Response
-from iot_logging.formatters.json_formatter import ExcludingNullJsonFormatter
+from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 from iot_logging.context import context
 
 # Configure logging
@@ -18,7 +18,7 @@ logger = logging.getLogger("request.lifecycle")
 
 # Set up JSON formatter
 handler = logging.StreamHandler()
-formatter = ExcludingNullJsonFormatter()
+formatter = StructuredJsonFormatter()
 handler.setFormatter(formatter)
 logger.handlers = [handler]
 

@@ -8,7 +8,7 @@ from iot_logging.schemas.http_request import HttpRequestLog
 from iot_logging.schemas.celery_task import CeleryTaskLog
 from iot_logging.schemas.kafka_consumer import KafkaConsumerLog
 from iot_logging.schemas.generic_service import GenericServiceLog
-from iot_logging.formatters.json_formatter import ExcludingNullJsonFormatter
+from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 
 # Export context and helpers
 from iot_logging.context import LoggingContext, context
@@ -33,7 +33,7 @@ __all__ = [
     "KafkaConsumerLog",
     "GenericServiceLog",
     # Formatters
-    "ExcludingNullJsonFormatter",
+    "StructuredJsonFormatter",
     # Context
     "LoggingContext",
     "context",

@@ -7,7 +7,7 @@ This example shows how to log Kafka message processing with the logging library.
 import logging
 import time
 from confluent_kafka import Consumer, KafkaError
-from iot_logging.formatters.json_formatter import ExcludingNullJsonFormatter
+from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 from iot_logging.context import context
 
 # ===== Configure logging =====
@@ -17,7 +17,7 @@ logger = logging.getLogger("kafka.consumer")
 
 # Set up JSON formatter
 handler = logging.StreamHandler()
-formatter = ExcludingNullJsonFormatter()
+formatter = StructuredJsonFormatter()
 handler.setFormatter(formatter)
 logger.handlers = [handler]
 

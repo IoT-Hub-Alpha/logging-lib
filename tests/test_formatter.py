@@ -6,11 +6,11 @@ from io import StringIO
 
 import pytest
 
-from iot_logging.formatters.json_formatter import ExcludingNullJsonFormatter
+from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 
 
-class TestExcludingNullJsonFormatter:
-    """Tests for ExcludingNullJsonFormatter."""
+class TestStructuredJsonFormatter:
+    """Tests for StructuredJsonFormatter."""
 
     def test_formatter_excludes_none_values(self):
         """Test that None values are excluded from JSON output."""
@@ -21,7 +21,7 @@ class TestExcludingNullJsonFormatter:
 
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        formatter = ExcludingNullJsonFormatter()
+        formatter = StructuredJsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -43,7 +43,7 @@ class TestExcludingNullJsonFormatter:
 
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        formatter = ExcludingNullJsonFormatter()
+        formatter = StructuredJsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -72,7 +72,7 @@ class TestExcludingNullJsonFormatter:
 
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        formatter = ExcludingNullJsonFormatter()
+        formatter = StructuredJsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -100,7 +100,7 @@ class TestExcludingNullJsonFormatter:
 
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        formatter = ExcludingNullJsonFormatter()
+        formatter = StructuredJsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -126,7 +126,7 @@ class TestExcludingNullJsonFormatter:
 
         stream = StringIO()
         handler = logging.StreamHandler(stream)
-        formatter = ExcludingNullJsonFormatter()
+        formatter = StructuredJsonFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 

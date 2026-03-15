@@ -1,5 +1,5 @@
 """Log formatters for structured logging."""
 
-from iot_logging.formatters.json_formatter import ExcludingNullJsonFormatter
+from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 
-__all__ = ["ExcludingNullJsonFormatter"]
+__all__ = ["StructuredJsonFormatter"]

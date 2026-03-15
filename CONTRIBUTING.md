@@ -80,7 +80,7 @@ Pydantic models for different log types:
 
 ### `/src/iot_logging/formatters/`
 Log formatters for output:
-- `json_formatter.py` - ExcludingNullJsonFormatter
+- `json_formatter.py` - StructuredJsonFormatter
 
 ### `/src/iot_logging/`
 Core modules:
