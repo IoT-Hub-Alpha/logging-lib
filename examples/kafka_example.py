@@ -2,27 +2,21 @@
 Kafka consumer integration example for iot-logging-schemas.
 
 This example shows how to log Kafka message processing with the logging library.
+Context fields are automatically injected by StructuredJsonFormatter.
 """
 
 import logging
 import time
 from confluent_kafka import Consumer, KafkaError
-from iot_logging.formatters.json_formatter import StructuredJsonFormatter
-from iot_logging.context import context
+from iot_logging import StructuredJsonFormatter
 
 # ===== Configure logging =====
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("kafka.consumer")
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
 
-# Set up JSON formatter
-handler = logging.StreamHandler()
-formatter = StructuredJsonFormatter()
-handler.setFormatter(formatter)
-logger.handlers = [handler]
-
-service_logger = logging.getLogger("service.background")
-service_logger.handlers = [handler]
+logger = logging.getLogger(__name__)
 
 
 # ===== Kafka Consumer Configuration =====
@@ -177,12 +171,13 @@ def run_consumer(topic, consumer_group):
     """Run Kafka consumer loop."""
     consumer, _ = create_kafka_consumer(topic, consumer_group)
 
-    service_logger.info(
+    logger.info(
         "Consumer started",
         extra={
             "service_name": "kafka_consumer",
             "component": topic,
             "consumer_group": consumer_group,
+            "event": "consumer_started",
         },
     )
 
@@ -240,11 +235,12 @@ def run_consumer(topic, consumer_group):
                 )
 
     except KeyboardInterrupt:
-        service_logger.info(
+        logger.info(
             "Consumer shutting down",
             extra={
                 "service_name": "kafka_consumer",
                 "component": topic,
+                "event": "consumer_shutdown",
             },
         )
     finally:

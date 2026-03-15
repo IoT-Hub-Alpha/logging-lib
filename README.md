@@ -1,17 +1,19 @@
 # iot-logging-schemas
 
+[![CI](https://github.com/IoT-Hub-Alpha/logging-lib/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/IoT-Hub-Alpha/logging-lib/actions/workflows/ci.yaml)
+
 **Unified, framework-agnostic log schemas for Django, FastAPI, and Java microservices**
 
 A Python library providing strict, Pydantic-based log schemas that eliminate null fields and enable clean, structured logging across IoT microservices.
 
 ## 📋 Features
 
+- ✅ **Automatic context injection** - `request_id`, `request_method`, `request_path`, `task_id`, `task_name` auto-injected into every log
 - ✅ **No null fields** - Only relevant fields are serialized to JSON
-- ✅ **Framework-agnostic** - Pure Python, works with Django, FastAPI, custom services
-- ✅ **Type-safe schemas** - Pydantic v2 models with validation and IDE support
+- ✅ **Framework-agnostic** - Pure Python, works with Django, FastAPI, Celery
 - ✅ **Context management** - Thread-safe contextvars for request/task tracing
 - ✅ **Django integration** - Middleware + signal handlers for automatic context binding
-- ✅ **Celery integration** - Signal handlers for task pre/post-run context
+- ✅ **Celery integration** - Signal handlers for task pre/post-run context binding
 - ✅ **Flexible metadata** - Support for custom fields via `extra={}` dict
 - ✅ **JSON formatter** - Excludes None values for clean log output
 
@@ -20,7 +22,7 @@ A Python library providing strict, Pydantic-based log schemas that eliminate nul
 ### Installation
 
 ```bash
-pip install git+https://github.com/yourorg/iot-logging-schemas.git
+pip install git+https://github.com/IoT-Hub-Alpha/logging-lib.git@dev
 ```
 
 ### Django Setup
@@ -39,7 +41,6 @@ LOGGING = {
     'formatters': {
         'json': {
             '()': 'iot_logging.StructuredJsonFormatter',
-            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s %(method)s %(path)s',
         },
     },
     'handlers': {
@@ -55,25 +56,22 @@ LOGGING = {
 }
 ```
 
-2. Use in views:
+2. Use in views (context is auto-injected by formatter):
 
 ```python
 import logging
-from iot_logging import HttpRequestLog
 
 logger = logging.getLogger(__name__)
 
 logger.info(
     "User login successful",
     extra={
-        "request_id": "abc-123",
-        "method": "POST",
-        "path": "/api/auth/login",
         "status_code": 200,
         "duration_ms": 45.5,
         "user_id": "user_456",
     }
 )
+# request_id, method, path are automatically injected by StructuredJsonFormatter
 ```
 
 ### FastAPI Setup
@@ -82,13 +80,22 @@ logger.info(
 from fastapi import FastAPI
 from iot_logging import StructuredJsonFormatter
 import logging
+import time
+import uuid
 
 app = FastAPI()
 
+# Configure logging with JSON formatter
+logging.basicConfig(level=logging.INFO)
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
+
 @app.middleware("http")
 async def log_requests(request, call_next):
-    request_id = request.headers.get("x-request-id", "")
+    request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
+    start_time = time.time()
     response = await call_next(request)
+    duration_ms = (time.time() - start_time) * 1000
 
     logger = logging.getLogger("request.lifecycle")
     logger.info(
@@ -98,7 +105,7 @@ async def log_requests(request, call_next):
             "method": request.method,
             "path": request.url.path,
             "status_code": response.status_code,
-            "duration_ms": 45.5,
+            "duration_ms": round(duration_ms, 2),
         }
     )
     return response
@@ -108,9 +115,17 @@ async def log_requests(request, call_next):
 
 ```python
 from celery import Celery
-from iot_logging import setup_celery_logging_context
+from iot_logging import StructuredJsonFormatter, setup_celery_logging_context
+import logging
 
-app = Celery(__name__)
+app = Celery(__name__, include=['myapp.tasks'])
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
+
+# Setup Celery context binding (task_id and task_name auto-injected)
 setup_celery_logging_context()
 
 @app.task
@@ -119,13 +134,11 @@ def process_data(device_id):
     logger.info(
         "Processing device data",
         extra={
-            "task_name": "process_data",
-            "task_id": "task-123",
             "device_id": device_id,
             "status": "started",
         }
     )
-    # ... process ...
+    # task_id and task_name are automatically injected by StructuredJsonFormatter
 ```
 
 ## 📦 Log Schemas
@@ -224,7 +237,7 @@ log = GenericServiceLog(
 
 ### Automatic (Django Middleware)
 
-The `RequestContextMiddleware` automatically binds request context:
+The `RequestContextMiddleware` automatically binds request context and injects it into all logs:
 
 ```python
 # In settings.py
@@ -232,9 +245,9 @@ MIDDLEWARE = [
     'iot_logging.django_helpers.RequestContextMiddleware',
 ]
 
-# Automatically available in all logs
-from iot_logging import context
-request_id = context.request_id.get()  # Available in all logging calls
+# In views - context fields are auto-injected by StructuredJsonFormatter
+logger.info("Event", extra={"user_id": 123})
+# Output includes: request_id, request_method, request_path (auto-injected)
 ```
 
 ### Manual Binding
@@ -338,11 +351,11 @@ logger.info("Event", extra={"status_code": 200})
 
 ## 📚 Examples
 
-See `/examples/` directory:
+See [examples/](/examples/) directory for complete working examples:
 
-- `django_example.py` - Django views, middleware, and Celery tasks
-- `fastapi_example.py` - FastAPI endpoints and background tasks
-- `kafka_example.py` - Kafka consumer message processing
+- [django_example.py](examples/django_example.py) - Django views, middleware, and Celery tasks
+- [fastapi_example.py](examples/fastapi_example.py) - FastAPI endpoints and background tasks
+- [kafka_example.py](examples/kafka_example.py) - Kafka consumer message processing
 
 ## 🧪 Testing
 
@@ -359,31 +372,33 @@ pytest tests/test_schemas.py -v
 
 ## 📖 API Reference
 
-### Schemas
-
-- `BaseLogSchema` - Base for all log schemas
-- `HttpRequestLog` - HTTP request/response logging
-- `CeleryTaskLog` - Celery task execution logging
-- `KafkaConsumerLog` - Kafka consumer processing logging
-- `GenericServiceLog` - Background service/cron job logging
-
 ### Formatters
 
-- `StructuredJsonFormatter` - JSON formatter that excludes None values
+- `StructuredJsonFormatter` - JSON formatter that auto-injects context and excludes None values
 
-### Context
+### Context Management
 
-- `LoggingContext` - Thread-safe context variables
+- `LoggingContext` - Thread-safe context variables with contextvars
 - `context` - Global context instance
-- `bind_request_context()` - Manually bind request
-- `clear_request_context()` - Clear request context
-- `bind_task_context()` - Manually bind task
-- `clear_task_context()` - Clear task context
-- `setup_celery_logging_context()` - Connect Celery signals
+- `context.set_request(request_id, method, path)` - Set request context
+- `context.clear_request()` - Clear request context
+- `context.set_task(task_id, task_name)` - Set task context
+- `context.clear_task()` - Clear task context
+- `context.get_all()` - Get all context (including None)
+- `context.get_all_non_null()` - Get non-None context only
 
 ### Django Integration
 
-- `RequestContextMiddleware` - Auto-bind request context
+- `RequestContextMiddleware` - Auto-bind request context, auto-clear after response
+- `bind_request_context(request, request_id)` - Manually bind request context
+- `clear_request_context()` - Manually clear request context
+
+### Celery Integration
+
+- `setup_celery_logging_context()` - Connect task_prerun/task_postrun signals
+- `bind_task_context(task_id, task_name)` - Manually bind task context
+- `clear_task_context()` - Manually clear task context
+- `get_task_context()` - Get current task context
 
 ## 🔄 Migration from Custom Logging
 

@@ -2,25 +2,23 @@
 FastAPI integration example for iot-logging-schemas.
 
 This example shows how to configure and use the logging library in a FastAPI app.
+Context fields (request_id, request_method, request_path, task_id, task_name) are
+automatically injected by StructuredJsonFormatter - no need to pass them manually.
 """
 
 import logging
 import time
 import uuid
 
-from fastapi import FastAPI, Request, Response
-from iot_logging.formatters.json_formatter import StructuredJsonFormatter
-from iot_logging.context import context
+from fastapi import FastAPI, Request
+from iot_logging import StructuredJsonFormatter, context
 
-# Configure logging
+# Configure logging with JSON formatter
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("request.lifecycle")
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
 
-# Set up JSON formatter
-handler = logging.StreamHandler()
-formatter = StructuredJsonFormatter()
-handler.setFormatter(formatter)
-logger.handlers = [handler]
+logger = logging.getLogger(__name__)
 
 # ===== Create FastAPI app =====
 
@@ -34,11 +32,12 @@ app = FastAPI()
 async def log_request_context(request: Request, call_next):
     """
     Middleware to bind request context and log request details.
+    Context (request_id, method, path) is auto-injected by StructuredJsonFormatter.
     """
     # Generate or extract request ID
     request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
 
-    # Bind to context
+    # Bind to context - will be auto-injected into all logs
     context.set_request(
         request_id=request_id,
         method=request.method,
@@ -51,9 +50,7 @@ async def log_request_context(request: Request, call_next):
     logger.info(
         "Request started",
         extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.path,
+            "event": "request_start",
         },
     )
 
@@ -64,15 +61,13 @@ async def log_request_context(request: Request, call_next):
         # Calculate duration
         duration_ms = (time.time() - start_time) * 1000
 
-        # Log response
+        # Log response - request_id, method, path auto-injected
         logger.info(
             "Request completed",
             extra={
-                "request_id": request_id,
-                "method": request.method,
-                "path": request.path,
                 "status_code": response.status_code,
-                "duration_ms": duration_ms,
+                "duration_ms": round(duration_ms, 2),
+                "event": "request_completed",
             },
         )
 
@@ -82,19 +77,18 @@ async def log_request_context(request: Request, call_next):
         return response
 
     except Exception as e:
-        # Log error
+        # Log error - request_id, method, path auto-injected
         duration_ms = (time.time() - start_time) * 1000
         logger.error(
             "Request failed",
             extra={
-                "request_id": request_id,
-                "method": request.method,
-                "path": request.path,
                 "status_code": 500,
-                "duration_ms": duration_ms,
+                "duration_ms": round(duration_ms, 2),
                 "error_type": type(e).__name__,
                 "error_message": str(e),
+                "event": "request_failed",
             },
+            exc_info=True,
         )
         raise
 
@@ -113,7 +107,7 @@ async def list_devices():
         "Querying devices",
         extra={
             "operation": "list_devices",
-            "query_params": {"limit": 100},
+            "event": "devices_queried",
         },
     )
     return {"devices": [{"id": "dev-1", "name": "Device 1"}]}
@@ -127,6 +121,7 @@ async def create_device(device_data: dict):
         extra={
             "operation": "create_device",
             "device_name": device_data.get("name"),
+            "event": "device_created",
         },
     )
     return {"id": "dev-123", "name": device_data.get("name"), "status": "created"}
@@ -140,6 +135,7 @@ async def get_device(device_id: str):
         extra={
             "operation": "get_device",
             "device_id": device_id,
+            "event": "device_retrieved",
         },
     )
     return {"id": device_id, "name": f"Device {device_id}", "status": "online"}
@@ -155,16 +151,13 @@ executor = ThreadPoolExecutor(max_workers=2)
 
 async def background_task(task_name: str):
     """Example background task."""
-    task_logger = logging.getLogger("background.task")
-
-    # Get current request context if available
-    request_id = context.request_id.get()
+    task_logger = logging.getLogger(__name__)
 
     task_logger.info(
         "Background task started",
         extra={
             "task_name": task_name,
-            "request_id": request_id,
+            "event": "task_started",
         },
     )
 
@@ -175,8 +168,8 @@ async def background_task(task_name: str):
         "Background task completed",
         extra={
             "task_name": task_name,
-            "request_id": request_id,
             "status": "success",
+            "event": "task_completed",
         },
     )
 
@@ -189,6 +182,7 @@ async def sync_device(device_id: str):
         extra={
             "device_id": device_id,
             "operation": "schedule_sync",
+            "event": "sync_scheduled",
         },
     )
 

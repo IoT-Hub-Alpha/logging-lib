@@ -2,6 +2,8 @@
 Django integration example for iot-logging-schemas.
 
 This example shows how to configure and use the logging library in a Django app.
+Context fields (request_id, request_method, request_path, task_id, task_name) are
+automatically injected by StructuredJsonFormatter - no need to pass them manually.
 """
 
 import logging
@@ -12,11 +14,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": "iot_logging.formatters.json_formatter.StructuredJsonFormatter",
-            "fmt": (
-                "%(asctime)s %(levelname)s %(name)s %(message)s "
-                "%(request_id)s %(method)s %(path)s %(status_code)s %(duration_ms)s"
-            ),
+            "()": "iot_logging.StructuredJsonFormatter",
         },
     },
     "handlers": {
@@ -40,34 +38,32 @@ MIDDLEWARE = [
 
 # ===== Usage in views.py =====
 
-logger = logging.getLogger("request.lifecycle")
+logger = logging.getLogger(__name__)
 
 
 def device_list_view(request):
     """Example view that logs request details."""
     from django.http import JsonResponse
-    from iot_logging.context import context
 
-    # Context is automatically bound by middleware
-    # Log request start
+    # Context (request_id, request_method, request_path) is automatically bound by middleware
+    # and auto-injected by StructuredJsonFormatter
     logger.info(
         "Listing devices",
         extra={
-            "method": request.method,
-            "path": request.path,
+            "operation": "list",
+            "event": "devices_fetched",
         },
     )
 
     # Simulate processing
     devices = [{"id": "dev-1", "name": "Device 1"}]
 
-    # Log response
+    # Log response - status_code and duration_ms are logged by middleware
     logger.info(
         "Device list response",
         extra={
-            "status_code": 200,
             "item_count": len(devices),
-            "duration_ms": 45.5,
+            "event": "list_complete",
         },
     )
 
@@ -77,9 +73,8 @@ def device_list_view(request):
 # ===== Usage in tasks.py (Celery) =====
 
 from celery import shared_task  # noqa: E402
-from iot_logging.context import context  # noqa: E402
 
-logger = logging.getLogger("celery.task")
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -90,11 +85,9 @@ def process_device_data(device_id):
         extra={
             "device_id": device_id,
             "status": "started",
+            "event": "device_processing_start",
         },
     )
-
-    # Get request context if this was triggered by a request
-    request_id = context.request_id.get()
 
     try:
         # Process data
@@ -104,7 +97,7 @@ def process_device_data(device_id):
                 "device_id": device_id,
                 "status": "success",
                 "duration_ms": 125.5,
-                "request_id": request_id,
+                "event": "device_processing_complete",
             },
         )
     except Exception as e:
@@ -115,8 +108,9 @@ def process_device_data(device_id):
                 "status": "failure",
                 "error_type": type(e).__name__,
                 "error_message": str(e),
-                "request_id": request_id,
+                "event": "device_processing_error",
             },
+            exc_info=True,
         )
         raise
 
@@ -124,6 +118,7 @@ def process_device_data(device_id):
 # ===== Setup Celery logging context =====
 
 # In your celery.py or __init__.py
-from iot_logging.celery_helpers import setup_celery_logging_context  # noqa: E402
+from iot_logging import setup_celery_logging_context  # noqa: E402
 
+# This connects Celery signals to automatically bind task_id and task_name to context
 setup_celery_logging_context()
