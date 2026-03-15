@@ -45,8 +45,8 @@ def device_list_view(request):
     """Example view that logs request details."""
     from django.http import JsonResponse
 
-    # Context (request_id, request_method, request_path) is automatically bound by middleware
-    # and auto-injected by StructuredJsonFormatter
+    # Context (request_id, request_method, request_path) is automatically bound
+    # by middleware and auto-injected by StructuredJsonFormatter
     logger.info(
         "Listing devices",
         extra={
