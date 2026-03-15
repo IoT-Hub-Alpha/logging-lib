@@ -114,3 +114,36 @@ class TestCeleryHelpers:
         # Request context should still be intact
         assert context.request_id.get() == "req-123"
         assert context.task_id.get() is None
+
+    def test_setup_celery_logging_context_signal_handlers(self):
+        """Test that setup_celery_logging_context connects signal handlers."""
+        try:
+            from celery.signals import task_prerun, task_postrun
+        except ImportError:
+            pytest.skip("Celery not installed")
+
+        from iot_logging.celery_helpers import setup_celery_logging_context
+
+        # Clear context
+        context.clear_task()
+
+        # Setup signal handlers
+        setup_celery_logging_context()
+
+        # Create a mock task object
+        class MockTask:
+            name = "test_task"
+
+        # Simulate task_prerun signal
+        task_prerun.send(sender=None, task_id="signal-task-123", task=MockTask(), **{})
+
+        # Context should be set by signal handler
+        assert context.task_id.get() == "signal-task-123"
+        assert context.task_name.get() == "test_task"
+
+        # Simulate task_postrun signal
+        task_postrun.send(sender=None, **{})
+
+        # Context should be cleared by signal handler
+        assert context.task_id.get() is None
+        assert context.task_name.get() is None

@@ -147,3 +147,63 @@ class TestStructuredJsonFormatter:
         assert log1["request_id"] == "req-1"
         assert log2["message"] == "Second message"
         assert log2["status"] == "success"
+
+    def test_formatter_removes_none_values(self):
+        """Test that None values are removed from output."""
+        logger = logging.getLogger("test.remove_none")
+        logger.handlers.clear()
+        logger.setLevel(logging.DEBUG)
+
+        stream = StringIO()
+        handler = logging.StreamHandler(stream)
+        formatter = StructuredJsonFormatter()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        logger.info(
+            "Test",
+            extra={
+                "device_id": "dev-1",
+                "error_message": None,
+                "retry_count": None,
+            },
+        )
+
+        output = stream.getvalue()
+        log_dict = json.loads(output)
+
+        assert "device_id" in log_dict
+        assert log_dict["device_id"] == "dev-1"
+        assert "error_message" not in log_dict
+        assert "retry_count" not in log_dict
+
+    def test_formatter_injects_context_variables(self):
+        """Test that context variables are auto-injected into logs."""
+        from iot_logging.context import context
+
+        logger = logging.getLogger("test.context_inject")
+        logger.handlers.clear()
+        logger.setLevel(logging.DEBUG)
+
+        stream = StringIO()
+        handler = logging.StreamHandler(stream)
+        formatter = StructuredJsonFormatter()
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+        # Set context
+        context.set_request(request_id="ctx-req-123", method="POST", path="/api/test")
+
+        # Log without explicitly passing request_id
+        logger.info("Processing request")
+
+        output = stream.getvalue()
+        log_dict = json.loads(output)
+
+        # Context variables should be auto-injected
+        assert log_dict["request_id"] == "ctx-req-123"
+        assert log_dict["request_method"] == "POST"
+        assert log_dict["request_path"] == "/api/test"
+
+        # Cleanup
+        context.clear_request()

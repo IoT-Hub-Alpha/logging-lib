@@ -86,6 +86,7 @@ class TestRequestContextMiddleware:
             class MockResponse:
                 def __init__(self):
                     self.headers = {}
+                    self.status_code = 200
 
                 def __setitem__(self, key, value):
                     self.headers[key] = value
@@ -107,6 +108,7 @@ class TestRequestContextMiddleware:
             class MockResponse:
                 def __init__(self):
                     self.headers = {}
+                    self.status_code = 200
 
                 def __setitem__(self, key, value):
                     self.headers[key] = value
@@ -128,6 +130,7 @@ class TestRequestContextMiddleware:
             class MockResponse:
                 def __init__(self):
                     self.headers = {}
+                    self.status_code = 200
 
                 def __setitem__(self, key, value):
                     self.headers[key] = value
@@ -158,6 +161,7 @@ class TestRequestContextMiddleware:
             class MockResponse:
                 def __init__(self):
                     self.headers = {}
+                    self.status_code = 200
 
                 def __setitem__(self, key, value):
                     self.headers[key] = value

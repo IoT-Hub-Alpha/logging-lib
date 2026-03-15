@@ -1,10 +1,10 @@
 """JSON formatter that excludes None values from output."""
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 from iot_logging.context import context
 
 
-class StructuredJsonFormatter(jsonlogger.JsonFormatter):
+class StructuredJsonFormatter(JsonFormatter):
     """
     Structured JSON formatter that excludes None values from output.
 
