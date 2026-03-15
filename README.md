@@ -215,6 +215,24 @@ log = KafkaConsumerLog(
 )
 ```
 
+### Kafka Producer Log
+
+```python
+from iot_logging import KafkaProducerLog
+
+log = KafkaProducerLog(
+    timestamp=datetime.now(),
+    level=LogLevel.INFO,
+    logger="kafka.producer",
+    message="Message sent",
+    topic="telemetry.raw",
+    partition=0,
+    message_key="device_123",
+    status="success",
+    duration_ms=15.5,
+)
+```
+
 ### Generic Service Log
 
 ```python

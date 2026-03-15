@@ -9,6 +9,7 @@ from iot_logging.schemas.celery_task import CeleryTaskLog
 from iot_logging.schemas.generic_service import GenericServiceLog
 from iot_logging.schemas.http_request import HttpRequestLog
 from iot_logging.schemas.kafka_consumer import KafkaConsumerLog
+from iot_logging.schemas.kafka_producer import KafkaProducerLog
 
 
 class TestBaseLogSchema:
@@ -201,6 +202,55 @@ class TestKafkaConsumerLog:
         assert log.partition == 0
         assert log.offset == 12345
         assert log.processing_duration_ms == 25.5
+
+
+class TestKafkaProducerLog:
+    """Tests for KafkaProducerLog."""
+
+    def test_kafka_producer_log_required_fields(self):
+        """Test Kafka producer log with required fields."""
+        log = KafkaProducerLog(
+            timestamp=datetime.now(),
+            level=LogLevel.INFO,
+            logger="kafka.producer",
+            message="Message sent",
+            topic="telemetry.raw",
+        )
+        assert log.topic == "telemetry.raw"
+
+    def test_kafka_producer_log_with_optional_fields(self):
+        """Test Kafka producer log with optional fields."""
+        log = KafkaProducerLog(
+            timestamp=datetime.now(),
+            level=LogLevel.INFO,
+            logger="kafka.producer",
+            message="Message sent",
+            topic="telemetry.raw",
+            partition=0,
+            message_key="device_123",
+            status="success",
+            duration_ms=15.5,
+        )
+        assert log.partition == 0
+        assert log.message_key == "device_123"
+        assert log.status == "success"
+        assert log.duration_ms == 15.5
+
+    def test_kafka_producer_log_with_error(self):
+        """Test Kafka producer log with error tracking."""
+        log = KafkaProducerLog(
+            timestamp=datetime.now(),
+            level=LogLevel.ERROR,
+            logger="kafka.producer",
+            message="Failed to send message",
+            topic="telemetry.raw",
+            status="error",
+            error_type="TimeoutError",
+            error_message="Send timeout exceeded",
+        )
+        assert log.status == "error"
+        assert log.error_type == "TimeoutError"
+        assert log.error_message == "Send timeout exceeded"
 
 
 class TestGenericServiceLog:

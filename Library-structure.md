@@ -4,14 +4,14 @@
 
 **iot-logging-schemas** is a unified, framework-agnostic log schema library for IoT microservices. It provides:
 
-- **5 Pydantic v2 log schemas** with type-safe field definitions
+- **6 Pydantic v2 log schemas** with type-safe field definitions
 - **Structured JSON formatter** that automatically injects context and excludes null values
 - **Thread-safe context management** using Python contextvars
 - **Framework integrations** for Django, FastAPI, and Celery
-- **Kafka consumer logging** support
-- **95% test coverage** with comprehensive test suite
+- **Kafka producer and consumer logging** support
+- **97% test coverage** with comprehensive test suite
 
-The library ensures all services (Django, FastAPI, Kafka consumers) produce **consistent, queryable structured logs** without manual configuration.
+The library ensures all services (Django, FastAPI, Kafka producers/consumers) produce **consistent, queryable structured logs** without manual configuration.
 
 ---
 
@@ -33,6 +33,7 @@ logging-lib/
 │       ├── http_request.py             # HttpRequestLog schema
 │       ├── celery_task.py              # CeleryTaskLog schema
 │       ├── kafka_consumer.py           # KafkaConsumerLog schema
+│       ├── kafka_producer.py           # KafkaProducerLog schema
 │       └── generic_service.py          # GenericServiceLog schema
 ├── tests/                              # Test suite (95% coverage)
 │   ├── test_schemas.py                 # Schema validation tests
@@ -564,7 +565,52 @@ log = KafkaConsumerLog(
 
 ---
 
-### 10. `src/iot_logging/schemas/generic_service.py`
+### 10. `src/iot_logging/schemas/kafka_producer.py`
+
+**Purpose**: Kafka producer message sending logging.
+
+#### Class: `KafkaProducerLog(BaseLogSchema)`
+
+Schema for logging Kafka message production and sending.
+
+**Required Fields**:
+- `topic: str` - Kafka topic name (e.g., "telemetry.raw")
+
+**Optional Fields**:
+- `partition: Optional[int]` - Target partition number (≥ 0)
+- `message_key: Optional[str]` - Kafka message key
+- `duration_ms: Optional[float]` - Time to send message in milliseconds (≥ 0)
+- `status: Optional[str]` - Send status (success, error, timeout)
+- `error_type: Optional[str]` - Exception type if error
+- `error_message: Optional[str]` - Exception message
+
+**Validation**:
+- `partition`: value ≥ 0
+- `duration_ms`: value ≥ 0
+
+**Differences from KafkaConsumerLog**:
+- No `consumer_group` (producers don't belong to groups)
+- No `offset` (producers don't track message offsets)
+- No `downstream_latency_ms` (not applicable for producers)
+
+**Example**:
+```python
+log = KafkaProducerLog(
+    timestamp=datetime.now(),
+    level=LogLevel.INFO,
+    logger="kafka.producer",
+    message="Message sent",
+    topic="telemetry.raw",
+    partition=0,
+    message_key="device_123",
+    status="success",
+    duration_ms=15.5,
+)
+```
+
+---
+
+### 11. `src/iot_logging/schemas/generic_service.py`
 
 **Purpose**: Generic logging for background services, cron jobs, batch processes.
 
@@ -608,12 +654,12 @@ log = GenericServiceLog(
 
 ## Test Suite
 
-Located in `tests/` directory. 51 passing tests with 95% coverage.
+Located in `tests/` directory. 56 passing tests with 97% coverage.
 
 ### Test Files
 
-#### `test_schemas.py` (34 tests)
-Tests all 5 schema types:
+#### `test_schemas.py` (37 tests)
+Tests all 6 schema types:
 - Field presence and validation
 - Required vs optional fields
 - Constraint validation (status_code 100-599, duration_ms ≥ 0, etc.)

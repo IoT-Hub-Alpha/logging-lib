@@ -1,13 +1,16 @@
 """
-Kafka consumer integration example for iot-logging-schemas.
+Kafka integration example for iot-logging-schemas.
 
-This example shows how to log Kafka message processing with the logging library.
+This example shows how to log both Kafka message production and consumption.
 Context fields are automatically injected by StructuredJsonFormatter.
 """
 
+import json
 import logging
 import time
-from confluent_kafka import Consumer, KafkaError
+
+from confluent_kafka import Consumer, KafkaError, Producer
+
 from iot_logging import StructuredJsonFormatter
 
 # ===== Configure logging =====
@@ -245,6 +248,64 @@ def run_consumer(topic, consumer_group):
         )
     finally:
         consumer.close()
+
+
+# ===== Kafka Producer =====
+
+
+def produce_telemetry_message(device_id, temperature, humidity):
+    """
+    Produce a telemetry message to Kafka and log it.
+    """
+    producer = Producer({"bootstrap.servers": "localhost:9092"})
+    start_time = time.time()
+
+    try:
+        message = {
+            "device_id": device_id,
+            "temperature": temperature,
+            "humidity": humidity,
+            "timestamp": time.time(),
+        }
+
+        # Send message
+        producer.produce(
+            topic="telemetry.raw",
+            key=device_id.encode("utf-8"),
+            value=json.dumps(message).encode("utf-8"),
+        )
+        producer.flush()
+
+        duration_ms = (time.time() - start_time) * 1000
+
+        # Log successful send
+        logger.info(
+            "Telemetry message sent",
+            extra={
+                "topic": "telemetry.raw",
+                "message_key": device_id,
+                "status": "success",
+                "duration_ms": duration_ms,
+            },
+        )
+
+    except Exception as e:
+        duration_ms = (time.time() - start_time) * 1000
+        logger.error(
+            "Failed to send telemetry message",
+            extra={
+                "topic": "telemetry.raw",
+                "message_key": device_id,
+                "status": "error",
+                "duration_ms": duration_ms,
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
+        raise
+
+    finally:
+        producer.flush()
 
 
 # ===== Run example =====
