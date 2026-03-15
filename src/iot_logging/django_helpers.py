@@ -1,10 +1,13 @@
 """Django integration helpers for logging context."""
 
 import logging
+import time
 import uuid
 from typing import Optional
 
 from iot_logging.context import context
+
+logger = logging.getLogger("request.lifecycle")
 
 
 def bind_request_context(
@@ -66,8 +69,21 @@ class RequestContextMiddleware:
         # Bind to context
         bind_request_context(request, request_id=request_id)
 
+        start_time = time.time()
+
         # Process request
         response = self.get_response(request)
+
+        duration_ms = round((time.time() - start_time) * 1000, 2)
+
+        # Log HTTP request (context already injected by formatter)
+        logger.info(
+            "HTTP request completed",
+            extra={
+                "status_code": response.status_code,
+                "duration_ms": duration_ms,
+            },
+        )
 
         # Add request ID to response headers
         response["X-Request-ID"] = request_id
