@@ -331,7 +331,9 @@ MIDDLEWARE = [
 
 #### Function: `bind_request_context(request, request_id: Optional[str] = None) -> str`
 
-Binds HTTP request to logging context.
+Binds HTTP request to logging context. **FastAPI-specific** (uses `request.url.path`).
+
+**Note**: For Django, use `django_bind_request_context` instead, which uses `request.path`.
 
 **Args**:
 - `request`: Starlette/FastAPI Request object
@@ -358,13 +360,17 @@ async def my_endpoint(request: Request):
 
 #### Function: `clear_request_context() -> None`
 
-Clears request context. Calls `context.clear_request()`.
+Clears request context. Calls `context.clear_request()`. **FastAPI-specific** (exported as generic but framework-specific).
+
+**Note**: For Django, use `django_clear_request_context` instead.
 
 ---
 
-#### Class: `RequestContextMiddleware`
+#### Class: `RequestContextMiddleware` (Exported as `FastAPIRequestContextMiddleware`)
 
 FastAPI middleware (BaseHTTPMiddleware) that automatically binds request context to every HTTP request.
+
+**Note**: Exported as `FastAPIRequestContextMiddleware` to avoid naming conflict with Django's `RequestContextMiddleware`.
 
 **Purpose**: Eliminates boilerplate by automatically:
 - Extracting/generating request ID from `x-request-id` header

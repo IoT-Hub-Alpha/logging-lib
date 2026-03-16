@@ -503,14 +503,14 @@ pytest tests/test_schemas.py -v
 ### Django Integration
 
 - `RequestContextMiddleware` - Auto-bind request context, auto-clear after response
-- `bind_request_context(request, request_id)` - Manually bind request context
-- `clear_request_context()` - Manually clear request context
+- `django_bind_request_context(request, request_id)` - Manually bind request context (Django-specific)
+- `django_clear_request_context()` - Manually clear request context (Django-specific)
 
 ### FastAPI Integration
 
 - `FastAPIRequestContextMiddleware` - Auto-bind request context, auto-clear after response
-- `bind_request_context(request, request_id)` - Manually bind request context
-- `clear_request_context()` - Manually clear request context
+- `bind_request_context(request, request_id)` - Manually bind request context (FastAPI-specific, uses `request.url.path`)
+- `clear_request_context()` - Manually clear request context (FastAPI-specific)
 
 ### Kafka Integration
 

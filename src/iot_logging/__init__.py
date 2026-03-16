@@ -20,8 +20,8 @@ from iot_logging.django_helpers import (
 )
 from iot_logging.fastapi_helpers import (
     RequestContextMiddleware as FastAPIRequestContextMiddleware,
-    bind_request_context,
-    clear_request_context,
+    bind_request_context,  # FastAPI-specific: uses request.url.path
+    clear_request_context,  # FastAPI-specific
 )
 from iot_logging.celery_helpers import (
     setup_celery_logging_context,

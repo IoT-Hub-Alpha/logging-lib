@@ -1,4 +1,9 @@
-"""FastAPI integration helpers for logging context."""
+"""FastAPI integration helpers for logging context.
+
+Note: The bind_request_context and clear_request_context functions exported from
+iot_logging.__init__ are FastAPI-specific. They use request.url.path which is
+a Starlette/FastAPI attribute. For Django, use django_bind_request_context instead.
+"""
 
 import logging
 import time
@@ -7,6 +12,7 @@ from typing import Callable, Optional
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from iot_logging.context import context
 
@@ -60,7 +66,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         app.add_middleware(RequestContextMiddleware)
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> any:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request and response."""
         # Generate or extract request ID from header
         request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
