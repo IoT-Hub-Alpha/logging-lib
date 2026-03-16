@@ -34,6 +34,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          pip install -e .
 
       - name: Lint (black)
         run: |
@@ -74,6 +75,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          pip install -e .
       - name: Run tests with coverage gate
         run: |
           if [ -d "tests" ]; then
