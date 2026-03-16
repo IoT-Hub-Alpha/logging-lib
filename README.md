@@ -78,10 +78,8 @@ logger.info(
 
 ```python
 from fastapi import FastAPI
-from iot_logging import StructuredJsonFormatter
+from iot_logging import FastAPIRequestContextMiddleware, StructuredJsonFormatter
 import logging
-import time
-import uuid
 
 app = FastAPI()
 
@@ -90,26 +88,17 @@ logging.basicConfig(level=logging.INFO)
 for handler in logging.root.handlers:
     handler.setFormatter(StructuredJsonFormatter())
 
-@app.middleware("http")
-async def log_requests(request, call_next):
-    request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
-    start_time = time.time()
-    response = await call_next(request)
-    duration_ms = (time.time() - start_time) * 1000
-
-    logger = logging.getLogger("request.lifecycle")
-    logger.info(
-        "HTTP request completed",
-        extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_ms": round(duration_ms, 2),
-        }
-    )
-    return response
+# Add request context middleware (auto-injects request_id, method, path, status_code, duration_ms)
+app.add_middleware(FastAPIRequestContextMiddleware)
 ```
+
+The middleware automatically:
+- Extracts or generates request ID from `x-request-id` header
+- Binds request context (request_id, method, path)
+- Logs request completion with status_code and duration_ms
+- Sets `x-request-id` response header
+- Injects context into all logs via StructuredJsonFormatter
+- Handles exceptions with proper cleanup
 
 ### Celery Setup
 
@@ -139,6 +128,112 @@ def process_data(device_id):
         }
     )
     # task_id and task_name are automatically injected by StructuredJsonFormatter
+```
+
+### Kafka Consumer Setup
+
+```python
+from confluent_kafka import Consumer
+from iot_logging import StructuredJsonFormatter
+import logging
+import time
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
+
+logger = logging.getLogger("kafka.consumer")
+
+# Create consumer
+consumer = Consumer({
+    'bootstrap.servers': 'localhost:9092',
+    'group.id': 'telemetry-processor',
+    'auto.offset.reset': 'earliest'
+})
+
+consumer.subscribe(['telemetry.raw'])
+
+for msg in consumer:
+    start_time = time.time()
+
+    try:
+        # Process message
+        data = json.loads(msg.value().decode('utf-8'))
+        process_telemetry(data)
+        status = "success"
+        error_msg = None
+    except Exception as e:
+        status = "error"
+        error_msg = str(e)
+
+    # Log consumption (topic, consumer_group, partition, offset auto-validated)
+    duration_ms = (time.time() - start_time) * 1000
+    logger.info(
+        "Message processed",
+        extra={
+            "topic": msg.topic(),
+            "consumer_group": "telemetry-processor",
+            "partition": msg.partition(),
+            "offset": msg.offset(),
+            "status": status,
+            "processing_duration_ms": round(duration_ms, 2),
+            "error_message": error_msg,
+        }
+    )
+```
+
+### Kafka Producer Setup
+
+```python
+from confluent_kafka import Producer
+from iot_logging import StructuredJsonFormatter
+import logging
+import time
+import json
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+for handler in logging.root.handlers:
+    handler.setFormatter(StructuredJsonFormatter())
+
+logger = logging.getLogger("kafka.producer")
+
+producer = Producer({
+    'bootstrap.servers': 'localhost:9092',
+})
+
+def on_delivery(err, msg):
+    if err:
+        logger.error(
+            "Message delivery failed",
+            extra={
+                "topic": msg.topic(),
+                "error_type": str(type(err).__name__),
+                "error_message": str(err),
+                "status": "error",
+            }
+        )
+    else:
+        logger.info(
+            "Message delivered",
+            extra={
+                "topic": msg.topic(),
+                "partition": msg.partition(),
+                "offset": msg.offset(),
+                "status": "success",
+            }
+        )
+
+# Send message
+data = {"device_id": "dev-123", "temperature": 25.5}
+producer.produce(
+    'telemetry.raw',
+    key=b"dev-123",
+    value=json.dumps(data).encode('utf-8'),
+    callback=on_delivery
+)
+producer.flush()
 ```
 
 ## 📦 Log Schemas
@@ -410,6 +505,30 @@ pytest tests/test_schemas.py -v
 - `RequestContextMiddleware` - Auto-bind request context, auto-clear after response
 - `bind_request_context(request, request_id)` - Manually bind request context
 - `clear_request_context()` - Manually clear request context
+
+### FastAPI Integration
+
+- `FastAPIRequestContextMiddleware` - Auto-bind request context, auto-clear after response
+- `bind_request_context(request, request_id)` - Manually bind request context
+- `clear_request_context()` - Manually clear request context
+
+### Kafka Integration
+
+Kafka consumer and producer logging are handled via structured log schemas:
+- `KafkaConsumerLog` - Log message consumption and processing (topic, partition, offset, status)
+- `KafkaProducerLog` - Log message production and delivery (topic, partition, status)
+
+Usage: Log via `extra={}` dict with message details. The StructuredJsonFormatter automatically validates fields against the schema.
+
+```python
+logger.info("Message processed", extra={
+    "topic": msg.topic(),
+    "partition": msg.partition(),
+    "offset": msg.offset(),
+    "status": "success",
+    "processing_duration_ms": 25.5,
+})
+```
 
 ### Celery Integration
 

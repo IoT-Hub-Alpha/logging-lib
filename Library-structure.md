@@ -23,6 +23,7 @@ logging-lib/
 │   ├── __init__.py                     # Public API exports
 │   ├── context.py                      # Thread-safe context management
 │   ├── django_helpers.py               # Django middleware & helpers
+│   ├── fastapi_helpers.py              # FastAPI middleware & helpers
 │   ├── celery_helpers.py               # Celery signal handlers & helpers
 │   ├── formatters/
 │   │   ├── __init__.py
@@ -40,6 +41,7 @@ logging-lib/
 │   ├── test_formatter.py               # Formatter tests
 │   ├── test_context.py                 # Context isolation tests
 │   ├── test_django_helpers.py          # Django integration tests
+│   ├── test_fastapi_helpers.py         # FastAPI integration tests
 │   └── test_celery_helpers.py          # Celery integration tests
 ├── examples/                           # Usage examples
 │   ├── django_example.py               # Django setup & usage
@@ -320,6 +322,86 @@ MIDDLEWARE = [
 ```
 
 **Logger**: Uses logger named "request.lifecycle"
+
+---
+
+### 4b. `src/iot_logging/fastapi_helpers.py`
+
+**Purpose**: FastAPI integration for automatic request context binding.
+
+#### Function: `bind_request_context(request, request_id: Optional[str] = None) -> str`
+
+Binds HTTP request to logging context.
+
+**Args**:
+- `request`: Starlette/FastAPI Request object
+- `request_id`: Optional request ID. If None, generates UUID.
+
+**Returns**: The request_id (for setting in response headers)
+
+**Process**:
+1. If request_id not provided, generate UUID
+2. Call `context.set_request(request_id, request.method, request.url.path)`
+3. Return request_id
+
+**Usage**:
+```python
+from iot_logging import bind_request_context, clear_request_context
+
+async def my_endpoint(request: Request):
+    request_id = bind_request_context(request)
+    response = JSONResponse(...)
+    response.headers["x-request-id"] = request_id
+    clear_request_context()
+    return response
+```
+
+#### Function: `clear_request_context() -> None`
+
+Clears request context. Calls `context.clear_request()`.
+
+---
+
+#### Class: `RequestContextMiddleware`
+
+FastAPI middleware (BaseHTTPMiddleware) that automatically binds request context to every HTTP request.
+
+**Purpose**: Eliminates boilerplate by automatically:
+- Extracting/generating request ID from `x-request-id` header
+- Binding to context
+- Logging response with duration
+- Setting x-request-id response header
+- Clearing context (with exception handling)
+
+**Methods**:
+
+##### `async dispatch(self, request: Request, call_next: Callable) -> Response`
+Processes HTTP request and response.
+
+**Process**:
+1. Extract request_id from `x-request-id` header, or generate UUID
+2. Call `bind_request_context(request, request_id)`
+3. Record start_time
+4. Try to call `await call_next(request)` to process request
+5. On exception: log error with status_code=500, error_type, and error_message
+6. Calculate duration_ms
+7. Log "HTTP request completed" with status_code and duration_ms
+8. Set `x-request-id` response header
+9. Call `clear_request_context()` in finally block
+10. Return response or raise exception
+
+**FastAPI setup** (app creation):
+```python
+from fastapi import FastAPI
+from iot_logging import FastAPIRequestContextMiddleware
+
+app = FastAPI()
+app.add_middleware(FastAPIRequestContextMiddleware)
+```
+
+**Logger**: Uses logger named "request.lifecycle"
+
+**Exception Handling**: Logs errors and clears context even if request fails.
 
 ---
 

@@ -15,6 +15,11 @@ from iot_logging.formatters.json_formatter import StructuredJsonFormatter
 from iot_logging.context import LoggingContext, context
 from iot_logging.django_helpers import (
     RequestContextMiddleware,
+    bind_request_context as django_bind_request_context,
+    clear_request_context as django_clear_request_context,
+)
+from iot_logging.fastapi_helpers import (
+    RequestContextMiddleware as FastAPIRequestContextMiddleware,
     bind_request_context,
     clear_request_context,
 )
@@ -39,8 +44,12 @@ __all__ = [
     # Context
     "LoggingContext",
     "context",
-    # Django helpers
+    # Django helpers (backward compatible)
     "RequestContextMiddleware",
+    "django_bind_request_context",
+    "django_clear_request_context",
+    # FastAPI helpers
+    "FastAPIRequestContextMiddleware",
     "bind_request_context",
     "clear_request_context",
     # Celery helpers

@@ -7,11 +7,9 @@ automatically injected by StructuredJsonFormatter - no need to pass them manuall
 """
 
 import logging
-import time
-import uuid
 
-from fastapi import FastAPI, Request
-from iot_logging import StructuredJsonFormatter, context
+from fastapi import FastAPI
+from iot_logging import FastAPIRequestContextMiddleware, StructuredJsonFormatter
 
 # Configure logging with JSON formatter
 logging.basicConfig(level=logging.INFO)
@@ -24,77 +22,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-
-# ===== Middleware for request logging =====
-
-
-@app.middleware("http")
-async def log_request_context(request: Request, call_next):
-    """
-    Middleware to bind request context and log request details.
-    Context (request_id, method, path) is auto-injected by StructuredJsonFormatter.
-    """
-    # Generate or extract request ID
-    request_id = request.headers.get("x-request-id", str(uuid.uuid4()))
-
-    # Bind to context - will be auto-injected into all logs
-    context.set_request(
-        request_id=request_id,
-        method=request.method,
-        path=request.path,
-    )
-
-    # Start timing
-    start_time = time.time()
-
-    logger.info(
-        "Request started",
-        extra={
-            "event": "request_start",
-        },
-    )
-
-    try:
-        # Process request
-        response = await call_next(request)
-
-        # Calculate duration
-        duration_ms = (time.time() - start_time) * 1000
-
-        # Log response - request_id, method, path auto-injected
-        logger.info(
-            "Request completed",
-            extra={
-                "status_code": response.status_code,
-                "duration_ms": round(duration_ms, 2),
-                "event": "request_completed",
-            },
-        )
-
-        # Add request ID to response headers
-        response.headers["x-request-id"] = request_id
-
-        return response
-
-    except Exception as e:
-        # Log error - request_id, method, path auto-injected
-        duration_ms = (time.time() - start_time) * 1000
-        logger.error(
-            "Request failed",
-            extra={
-                "status_code": 500,
-                "duration_ms": round(duration_ms, 2),
-                "error_type": type(e).__name__,
-                "error_message": str(e),
-                "event": "request_failed",
-            },
-            exc_info=True,
-        )
-        raise
-
-    finally:
-        # Clear context
-        context.clear_request()
+# ===== Add request context middleware from logging-lib =====
+# This middleware automatically:
+# - Extracts or generates request ID from x-request-id header
+# - Binds request context (request_id, method, path)
+# - Logs request completion with status_code and duration_ms
+# - Sets x-request-id response header
+# - Clears context after response (with exception handling)
+app.add_middleware(FastAPIRequestContextMiddleware)
 
 
 # ===== Example endpoints =====
