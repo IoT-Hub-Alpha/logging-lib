@@ -1,10 +1,15 @@
 """Tests for FastAPI integration helpers."""
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
-from iot_logging.context import context
-from iot_logging.fastapi_helpers import (
+
+# Skip all tests in this module if FastAPI is not installed
+pytest.importorskip("fastapi")  # noqa: E402
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from iot_logging.context import context  # noqa: E402
+from iot_logging.fastapi_helpers import (  # noqa: E402
     RequestContextMiddleware,
     bind_request_context,
     clear_request_context,
