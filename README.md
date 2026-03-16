@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/IoT-Hub-Alpha/logging-lib/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/IoT-Hub-Alpha/logging-lib/actions/workflows/ci.yaml)
 
-**Unified, framework-agnostic log schemas for Django, FastAPI, and Java microservices**
+**Unified, framework-agnostic log schemas for Django, FastAPI, Celery, Kafka, and Java microservices**
 
 A Python library providing strict, Pydantic-based log schemas that eliminate null fields and enable clean, structured logging across IoT microservices.
 
@@ -10,10 +10,12 @@ A Python library providing strict, Pydantic-based log schemas that eliminate nul
 
 - ✅ **Automatic context injection** - `request_id`, `request_method`, `request_path`, `task_id`, `task_name` auto-injected into every log
 - ✅ **No null fields** - Only relevant fields are serialized to JSON
-- ✅ **Framework-agnostic** - Pure Python, works with Django, FastAPI, Celery
+- ✅ **Framework-agnostic** - Pure Python, works with Django, FastAPI, Celery, Kafka
 - ✅ **Context management** - Thread-safe contextvars for request/task tracing
 - ✅ **Django integration** - Middleware + signal handlers for automatic context binding
+- ✅ **FastAPI integration** - Middleware for request context and automatic logging
 - ✅ **Celery integration** - Signal handlers for task pre/post-run context binding
+- ✅ **Kafka integration** - Structured logging for producer and consumer operations
 - ✅ **Flexible metadata** - Support for custom fields via `extra={}` dict
 - ✅ **JSON formatter** - Excludes None values for clean log output
 
