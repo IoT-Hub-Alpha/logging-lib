@@ -18,17 +18,25 @@ from iot_logging.django_helpers import (
     bind_request_context as django_bind_request_context,
     clear_request_context as django_clear_request_context,
 )
-from iot_logging.fastapi_helpers import (
-    RequestContextMiddleware as FastAPIRequestContextMiddleware,
-    bind_request_context,  # FastAPI-specific: uses request.url.path
-    clear_request_context,  # FastAPI-specific
-)
 from iot_logging.celery_helpers import (
     setup_celery_logging_context,
     bind_task_context,
     clear_task_context,
     get_task_context,
 )
+
+# FastAPI helpers (optional import)
+try:
+    from iot_logging.fastapi_helpers import (
+        RequestContextMiddleware as FastAPIRequestContextMiddleware,
+        bind_request_context,  # FastAPI-specific: uses request.url.path
+        clear_request_context,  # FastAPI-specific
+    )
+except ImportError:
+    # FastAPI not installed - provide placeholders
+    FastAPIRequestContextMiddleware = None
+    bind_request_context = None
+    clear_request_context = None
 
 __all__ = [
     # Schemas
