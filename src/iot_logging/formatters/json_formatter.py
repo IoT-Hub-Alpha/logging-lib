@@ -10,13 +10,20 @@ class StructuredJsonFormatter(JsonFormatter):
     Structured JSON formatter that excludes None values from output.
 
     Automatically injects context variables (request_id, request_method,
-    request_path, task_id, task_name) into every log record so all services
-    produce consistent structured logs without manual extra= passing.
+    request_path, task_id, task_name) and log level into every log record
+    so all services produce consistent structured logs without manual extra= passing.
     """
 
     def add_fields(self, log_data, record, message_dict):
-        """Add fields to log record, injecting context and excluding None values."""
+        """
+        Add fields to log record.
+
+        Injects context variables, log level, and excludes None values.
+        """
         super().add_fields(log_data, record, message_dict)
+
+        # Always include log level
+        log_data["level"] = record.levelname.lower()  # info, warning, error, etc.
 
         # Inject context variables (only if not already set by explicit extra={})
         for key, value in context.get_all_non_null().items():
